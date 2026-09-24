@@ -4676,7 +4676,9 @@ void variant_file::output_indv_relatedness_Manichaikul(const parameters &params)
 	vector<vector<double> > phi(meta_data.N_indv, vector<double>(meta_data.N_indv, 0.0));
 	vector<vector<double> > N_AaAa(meta_data.N_indv, vector<double>(meta_data.N_indv, 0.0));
 	vector<vector<double> > N_AAaa(meta_data.N_indv, vector<double>(meta_data.N_indv, 0.0));
-	vector<double > N_Aa(meta_data.N_indv, 0.0);
+	// N_Aa[i][j]: sites at which i is heterozygous and j is called, so that with missing
+	// genotypes the denominator counts the same sites as N_AaAa and N_AAaa.
+	vector<vector<double> > N_Aa(meta_data.N_indv, vector<double>(meta_data.N_indv, 0.0));
 
 	while(!eof())
 	{
@@ -4709,17 +4711,17 @@ void variant_file::output_indv_relatedness_Manichaikul(const parameters &params)
 				continue;
 
 			e->get_indv_GENOTYPE_ids(ui, geno_id);
-			if ((geno_id.first != geno_id.second) && (geno_id.first >= 0) && (geno_id.second >= 0))
-			{
-				N_Aa[ui]++;
-			}
-
 			for (unsigned int uj=0; uj<meta_data.N_indv; uj++)
 			{
 				if (include_indv[uj] == false)
 					continue;
 
 				e->get_indv_GENOTYPE_ids(uj, geno_id2);
+				if ((geno_id.first != geno_id.second) && (geno_id.first >= 0) && (geno_id.second >= 0))
+				{
+					if ((geno_id2.first >= 0) && (geno_id2.second >= 0))
+						N_Aa[ui][uj]++;
+				}
 				if ((geno_id.first != geno_id.second) && (geno_id.first >= 0) && (geno_id.second >= 0))
 				{
 					if ((geno_id2.first != geno_id2.second) && (geno_id2.first >= 0) && (geno_id2.second >= 0))
@@ -4749,9 +4751,9 @@ void variant_file::output_indv_relatedness_Manichaikul(const parameters &params)
 		{
 			if (include_indv[uj] == false)
 				continue;
-			phi[ui][uj] = (N_AaAa[ui][uj] - 2.0*N_AAaa[ui][uj]) / (N_Aa[ui] + N_Aa[uj]);
+			phi[ui][uj] = (N_AaAa[ui][uj] - 2.0*N_AAaa[ui][uj]) / (N_Aa[ui][uj] + N_Aa[uj][ui]);
 			out << meta_data.indv[ui] << "\t" << meta_data.indv[uj];
-			out << "\t" << N_AaAa[ui][uj] << "\t" << N_AAaa[ui][uj] << "\t" << N_Aa[ui] << "\t" << N_Aa[uj];
+			out << "\t" << N_AaAa[ui][uj] << "\t" << N_AAaa[ui][uj] << "\t" << N_Aa[ui][uj] << "\t" << N_Aa[uj][ui];
 			out << "\t" << phi[ui][uj] << endl;
 		}
 	}
